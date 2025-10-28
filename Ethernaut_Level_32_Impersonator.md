@@ -197,7 +197,7 @@ Then, the size of the returned data is checked, lest it be zero, in which case t
 
 We also need some basic knowledge of ECDSA and signature malleability feature based on the feature of ECDSA. 
 
-![Elliptic curve](https://upload.wikimedia.org/wikipedia/commons/8/83/Elliptic_curve_%28large%29.svg)
+![Elliptic curve](https://upload.wikimedia.org/wikipedia/commons/d/da/Elliptic_curve_simple.svg)
 
 Above is the elliptic curve that we use to generate (v, r, s). We are not going to dive deep to the math of the ECDSA cryptography, all we have to know is that in the **Secp256k1** curve in the case of Bitcoin and Ethereum, it is **symmetrical** to the x-axis, which gives rise to the fact that (without going in depth into ECDSA math) there are two valid signatures for a message with the **same** private key, one corresponding to positive-y half of the curve and another for the negative one. 
 
