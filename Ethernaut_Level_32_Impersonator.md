@@ -197,7 +197,7 @@ Then, the size of the returned data is checked, lest it be zero, in which case t
 
 We also need some basic knowledge of ECDSA and signature malleability feature based on the feature of ECDSA. 
 
-![image-20251028173328340](/Users/yumengzhang/Library/Application Support/typora-user-images/image-20251028173328340.png)
+![Elliptic curve](https://upload.wikimedia.org/wikipedia/commons/8/83/Elliptic_curve_%28large%29.svg)
 
 Above is the elliptic curve that we use to generate (v, r, s). We are not going to dive deep to the math of the ECDSA cryptography, all we have to know is that in the **Secp256k1** curve in the case of Bitcoin and Ethereum, it is **symmetrical** to the x-axis, which gives rise to the fact that (without going in depth into ECDSA math) there are two valid signatures for a message with the **same** private key, one corresponding to positive-y half of the curve and another for the negative one. 
 
@@ -211,7 +211,21 @@ We can take advantage of this feature and answer the question raised above: how 
 
 In order to calculate the (v', r, s'), we have to first fetch (v, r, s). We cannot use the trick `await web3.eth.getStorageAt()` since `Impersonator` is an `Ownable` and has storage protection. An easy way is to check the emitted event log on **Etherscan**. If you search the instance address and go to the event log, you will see something like this:
 
-![image-20251028175426073](/Users/yumengzhang/Library/Application Support/typora-user-images/image-20251028175426073.png)
+```
+NewLock (index_topic_1 address lockAddress, uint256 lockId, uint256 timestamp, bytes signature)
+
+[topic0] 0xac736e29adaa5052dee435c56ab8fe44ca41d6e5337e6b528e771ac85e97b7c3  
+[topic1] 0x00000000000000000000000003fe6ac034d9b19c2286dc4717462e679d69f7062  
+
+Hex →  
+0000000000000000000000000000000000000000000000000000000000000539  
+0000000000000000000000000000000000000000000000000000000068ff0ac  
+0000000000000000000000000000000000000000000000000000000000000060  
+1932cb842d3e27f54f79f7be0289437381ba2410fdefbae36850bee9c41e3b91  
+78489c64a0db16c40ef986beccc8f069ad5041e5b992d76fe76bba057d9abff2  
+000000000000000000000000000000000000000000000000000000000000001b
+
+```
 
 This is the emitted `Newlock` event. [topic0] is the selector of the event itself, and [topic1] stores the indexed `lockAddress`. Next two bytes32s are the `uint256 lockId` and the `uint256 timestamp`. Next five slots are for the `bytes signature`. The first 0x60 is the offset, which indicates that actual data starts at the fourth 32-byte slot. The second 0x60 is the length of the data, which takes 3 full 32-byte slots. The last 3 slots are corresponding r, s, and v.
 
